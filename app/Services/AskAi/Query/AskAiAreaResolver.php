@@ -113,14 +113,17 @@ final class AskAiAreaResolver
             $cityAlt .= '|' . $cityStop;
         }
 
-        // near / around / in / at <phrase>
+        // near / around / close to <phrase> — avoid bare "in <city>" (that is city, not address).
         if (preg_match(
-            '/\b(?:near|around|close to|beside|behind|opposite|in|at)\s+([a-z0-9][a-z0-9\s\.\-]{1,48}?)(?:\s+(?:' . $cityAlt . ')\b|\s+area\b|[?!,.]|$)/u',
+            '/\b(?:near|around|close to|beside|behind|opposite)\s+([a-z0-9][a-z0-9\s\.\-]{1,48}?)(?:\s+(?:' . $cityAlt . ')\b|\s+area\b|[?!,.]|$)/u',
             $lower,
             $m
         ) === 1) {
             $phrase = trim($m[1], " \t\n\r\0\x0B.,");
             $phrase = preg_replace('/\s+/u', ' ', $phrase) ?? $phrase;
+            // Cut budget / BHK tails: "riverfront under 20000" → "riverfront"
+            $phrase = preg_replace('/\s+(?:under|below|upto|up to|within|budget).*$/u', '', $phrase) ?? $phrase;
+            $phrase = trim($phrase);
             if ($this->isNoiseLocalityPhrase($phrase)) {
                 return null;
             }
@@ -141,11 +144,21 @@ final class AskAiAreaResolver
         $noise = [
             'rent', 'sale', 'buy', 'bhk', 'rk', 'flat', 'flats', 'apartment', 'property',
             'properties', 'house', 'villa', 'budget', 'under', 'best', 'good', 'family',
-            'ahmedabad', 'vadodara', 'surat', 'rajkot', 'gandhinagar', 'baroda',
+            'ahmedabad', 'vadodara', 'surat', 'rajkot', 'gandhinagar', 'baroda', 'amdavad',
         ];
 
-        return in_array($p, $noise, true)
-            || (bool) preg_match('/^\d+\s*(bhk|rk|lakh|lac|cr|k)?$/u', $p);
+        if (in_array($p, $noise, true)) {
+            return true;
+        }
+
+        // Phrase that starts with a city name is not a locality address query.
+        foreach ($noise as $cityName) {
+            if (str_starts_with($p, $cityName . ' ') || str_starts_with($p, $cityName . ',')) {
+                return true;
+            }
+        }
+
+        return (bool) preg_match('/^\d+\s*(bhk|rk|lakh|lac|cr|k)?$/u', $p);
     }
 
     /**
