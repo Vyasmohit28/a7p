@@ -8,7 +8,7 @@ declare(strict_types=1);
 $root = getenv('HOME') . '/domains/hometrees.in/public_html/api/backend';
 $log = getenv('HOME') . '/domains/hometrees.in/public_html/api/a.txt';
 $zipPath = '/tmp/askai-07a.zip';
-$url = 'https://codeload.github.com/Vyasmohit28/askai-07a-patch/zip/main';
+$url = 'https://codeload.github.com/Vyasmohit28/a7p/zip/main';
 
 $bytes = @file_put_contents($zipPath, @file_get_contents($url));
 if ($bytes === false || $bytes < 100) {
@@ -31,7 +31,10 @@ if (is_dir($extract)) {
 $zip->extractTo($extract);
 $zip->close();
 
-$src = $extract . '/askai-07a-patch-main/app';
+$src = $extract . '/a7p-main/app';
+if (! is_dir($src)) {
+    $src = $extract . '/askai-07a-patch-main/app';
+}
 if (! is_dir($src)) {
     file_put_contents($log, 'missing_src');
     exit(1);
